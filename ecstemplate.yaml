@@ -19,7 +19,8 @@ Parameters:
     Description: ALB Listener ARN from vpc-template.yaml
   ECRImageUri:
     Type: String
-    Description: public.ecr.aws/k8g5g0y1/my-springboot-app:awsweek5project
+    Description: Full URI of the ECR image (e.g., <account-id>.dkr.ecr.us-east-1.amazonaws.com/my-springboot-app:latest)
+    Default: public.ecr.aws/k8g5g0y1/my-springboot-app:awsweek5project
 
 Resources:
   # ECS Cluster

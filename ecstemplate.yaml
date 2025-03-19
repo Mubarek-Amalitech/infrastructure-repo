@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ECS Deployment with Fargate, Auto-Scaling, and Blue/Green Deployment
+Description: ECS Deployment with Fargate, Auto-Scaling, and Blue/Green Deployment using Parameter Store
 
 Parameters:
   VPCId:
@@ -19,7 +19,7 @@ Parameters:
     Description: ALB Listener ARN from vpc-template.yaml
   ECRImageUri:
     Type: String
-    Description: Full URI of the ECR image (e.g., <account-id>.dkr.ecr.us-east-1.amazonaws.com/my-springboot-app:latest)
+    Description: Full URI of the ECR image
     Default: public.ecr.aws/k8g5g0y1/my-springboot-app:awsweek5project
 
 Resources:
@@ -32,7 +32,7 @@ Resources:
         - Key: Name
           Value: MyECSCluster
 
-  # IAM Role for ECS Task Execution
+  # IAM Role for ECS Task Execution with Parameter Store Access
   ECSExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -45,6 +45,21 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ParameterStoreAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                Resource:
+                  - arn:aws:ssm:*:*:parameter/my-springboot-app/*
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: '*'  # Adjust to specific KMS key ARN if using custom encryption
       Tags:
         - Key: Name
           Value: ECSExecutionRole
@@ -56,7 +71,7 @@ Resources:
       LogGroupName: /ecs/my-springboot-app
       RetentionInDays: 7
 
-  # ECS Task Definition
+  # ECS Task Definition with Parameter Store References
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -73,6 +88,13 @@ Resources:
           PortMappings:
             - ContainerPort: 8080
           Essential: true
+          Environment:
+            - Name: aws.s3-bucket
+              ValueFrom: /my-springboot-app/aws.s3-bucket
+            - Name: aws.access-key
+              ValueFrom: /my-springboot-app/aws.access-key
+            - Name: aws.secret-key
+              ValueFrom: /my-springboot-app/aws.secret-key
           LogConfiguration:
             LogDriver: awslogs
             Options:

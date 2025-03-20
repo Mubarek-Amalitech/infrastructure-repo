@@ -118,56 +118,67 @@ Resources:
         - Key: Name
           Value: ECSSecurityGroup
 
-  # ALB Target Group
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      VpcId: !Ref VPCId
-      Port: 8080
-      Protocol: HTTP
-      TargetType: ip
-      HealthCheckPath: /
-      Tags:
-        - Key: Name
-          Value: MyTargetGroup
+ # ALB Target Group 1 (Blue)
+TargetGroup1:
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    VpcId: !Ref VPCId
+    Port: 8080
+    Protocol: HTTP
+    TargetType: ip
+    HealthCheckPath: /
+    Tags:
+      - Key: Name
+        Value: MyTargetGroup1
 
+# ALB Target Group 2 (Green)
+TargetGroup2:
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    VpcId: !Ref VPCId
+    Port: 8080
+    Protocol: HTTP
+    TargetType: ip
+    HealthCheckPath: /
+    Tags:
+      - Key: Name
+        Value: MyTargetGroup2
   # ALB Listener Rule
-  ALBListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn: !Ref ALBListenerArn
-      Priority: 1
-      Conditions:
-        - Field: path-pattern
-          Values: ['/*']
-      Actions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroup
-
-  # ECS Service
-  ECSService:
-    Type: AWS::ECS::Service
-    DependsOn: ALBListenerRule
-    Properties:
-      Cluster: !Ref ECSCluster
-      ServiceName: MySpringBootService
-      TaskDefinition: !Ref ECSTaskDefinition
-      DesiredCount: 2
-      LaunchType: FARGATE
-      DeploymentController:
-        Type: CODE_DEPLOY
-      LoadBalancers:
-        - ContainerName: springboot-app
-          ContainerPort: 8080
-          TargetGroupArn: !Ref TargetGroup
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          Subnets:
-            - !Ref PrivateSubnet1Id
-            - !Ref PrivateSubnet2Id
-          SecurityGroups:
-            - !Ref ECSSecurityGroup
-      HealthCheckGracePeriodSeconds: 60
+ALBListenerRule:
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    ListenerArn: !Ref ALBListenerArn
+    Priority: 1
+    Conditions:
+      - Field: path-pattern
+        Values: ['/*']
+    Actions:
+      - Type: forward
+        TargetGroupArn: !Ref TargetGroup1
+# ECS Service
+ECSService:
+  Type: AWS::ECS::Service
+  DependsOn: ALBListenerRule
+  Properties:
+    Cluster: !Ref ECSCluster
+    ServiceName: MySpringBootService
+    TaskDefinition: !Ref ECSTaskDefinition
+    DesiredCount: 2
+    LaunchType: FARGATE
+    DeploymentController:
+      Type: CODE_DEPLOY
+    LoadBalancers:
+      - ContainerName: springboot-app
+        ContainerPort: 8080
+        TargetGroupArn: !Ref TargetGroup1  # Use TargetGroup1 initially
+    NetworkConfiguration:
+      AwsvpcConfiguration:
+        Subnets:
+          - !Ref PrivateSubnet1Id
+          - !Ref PrivateSubnet2Id
+        SecurityGroups:
+          - !Ref ECSSecurityGroup
+    HealthCheckGracePeriodSeconds: 60
 
   # Auto-Scaling Target
   AutoScalingTarget:
@@ -198,9 +209,12 @@ Outputs:
   ECSServiceName:
     Value: !Ref ECSService
     Description: Name of the ECS Service
-  TargetGroupArn:
-    Value: !Ref TargetGroup
-    Description: ARN of the Target Group for CodeDeploy
+  TargetGroup1Arn:
+    Value: !Ref TargetGroup1
+    Description: ARN of the First Target Group for CodeDeploy
+  TargetGroup2Arn:
+    Value: !Ref TargetGroup2
+    Description: ARN of the Second Target Group for CodeDeploy
   TaskDefinitionArn:
     Value: !Ref ECSTaskDefinition
     Description: ARN of the Task Definition
